@@ -68,7 +68,7 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="ForumBuddy.config">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
