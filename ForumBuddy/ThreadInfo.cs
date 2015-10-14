@@ -12,6 +12,7 @@ namespace ForumBuddy
     {
         public Guid Id;
         public string Title;
+        public DateTime PostedDate;
         public string Summary;
         public Uri Link;
         public ThreadPriority Priority;
@@ -27,6 +28,7 @@ namespace ForumBuddy
 
             threadInfo.Id = Guid.Parse(xml.Element("Id").Value);
             threadInfo.Title = xml.Element("Title").Value;
+            threadInfo.PostedDate = DateTime.Parse(xml.Element("PostedDate").Value);
             threadInfo.Summary = xml.Element("Summary").Value;
             threadInfo.Link = new Uri(xml.Element("Link").Value);
             threadInfo.Priority = (ThreadPriority)Enum.Parse(typeof(ThreadPriority), xml.Element("Priority").Value);
@@ -40,6 +42,7 @@ namespace ForumBuddy
 
             xml.Add(new XElement("Id", this.Id.ToString()));
             xml.Add(new XElement("Title", this.Title));
+            xml.Add(new XElement("PostedDate", this.PostedDate));
             xml.Add(new XElement("Summary", this.Summary));
             xml.Add(new XElement("Link", this.Link.ToString()));
             xml.Add(new XElement("Priority", this.Priority.ToString()));

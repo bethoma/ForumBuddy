@@ -17,6 +17,7 @@ namespace ForumBuddy
         private int pollingIntervalSeconds;
         private int maxNewThreads;
         private int highPriorityThreshold;
+        private List<ThreadPriority> priorities;
         private Timer pollingTimer;
         private ThreadInfo currentHeadThread;
 
@@ -30,10 +31,16 @@ namespace ForumBuddy
             this.pollingIntervalSeconds = int.Parse(configFragment.Element("PollingIntervalSeconds").Value);
             this.maxNewThreads = int.Parse(configFragment.Element("MaxNewThreads").Value);
             this.highPriorityThreshold = int.Parse(configFragment.Element("HighPriorityThreshold").Value);
+            var priorities = configFragment.Element("ThreadPriorities").Value;
+            this.priorities = new List<ThreadPriority>();
+            foreach (var priority in priorities.Split(';'))
+            {
+                this.priorities.Add((ThreadPriority)Enum.Parse(typeof(ThreadPriority), priority));
+            }
 
             this.loadState();
 
-            return this.getNewThreads();
+            return new List<ThreadInfo>();
         }
 
         public void StartThreadListener()
@@ -97,10 +104,14 @@ namespace ForumBuddy
             for (int i = 0; i < threadsToReturn; i++)
             {
                 var threadInfo = allThreads[i];
-                if (currentHeadThread.Id.Equals(threadInfo.Id))
+
+                if (threadInfo.PostedDate <= currentHeadThread.PostedDate)
                     break;
 
-                threads.Add(threadInfo);
+                if (this.priorities.Contains(threadInfo.Priority))
+                {
+                    threads.Add(threadInfo);
+                }
             }
 
             if (threads.Any())
@@ -127,6 +138,35 @@ namespace ForumBuddy
                 var titleIdString = "threadTitle_" + threadId.ToString();
                 HtmlNode titleNode = node.SelectNodes(".//a[@id='" + titleIdString + "']").FirstOrDefault();
                 HtmlNode summaryNode = node.SelectNodes(".//div[@class='threadSummary']").FirstOrDefault();
+                HtmlNode lastPostNode = node.SelectNodes(".//span[@class='lastpost']").FirstOrDefault();
+                HtmlNode timeNode = lastPostNode.SelectNodes(".//span[@class='timeago smallgreytext']")[1];
+                DateTime postedDate = DateTime.Now;
+                var timeText = timeNode.InnerText;
+                if (timeText.Contains("ago"))
+                {
+                    var timeComponents = timeText.Split(' ');
+                    var date = DateTime.Now;
+                    if (timeComponents.Count() == 5)
+                    {
+                        int hours = int.Parse(timeComponents[0]);
+                        date = date.AddHours(hours * -1);
+                        int minutes = int.Parse(timeComponents[2]);
+                        date = date.AddMinutes(minutes * -1);
+                    }
+                    else
+                    {
+                        int minutes = int.Parse(timeComponents[0]);
+                        date = date.AddMinutes(minutes - minutes * -1);
+                    }
+
+                    postedDate = new DateTime(date.Year, date.Month, date.Day, date.Hour, date.Minute, 0);
+
+                }
+                else
+                {
+                    postedDate = DateTime.Parse(timeText);
+                }
+
                 var votesIdString = "threadVoteText_" + threadId.ToString();
                 HtmlNode votesNode = node.SelectNodes(".//div[@id='" + votesIdString + "']").FirstOrDefault();
                 var votes = int.Parse(votesNode.InnerText.Split(' ')[0]);
@@ -135,6 +175,7 @@ namespace ForumBuddy
                 {
                     Id = threadId,
                     Title = titleNode.InnerText,
+                    PostedDate = postedDate,
                     Summary = summaryNode.InnerText,
                     Link = new Uri(titleNode.Attributes["href"].Value),
                     Priority = (this.highPriorityThreshold != -1 && votes >= this.highPriorityThreshold) ? ThreadPriority.High : ThreadPriority.Normal

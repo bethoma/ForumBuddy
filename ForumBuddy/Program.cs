@@ -42,30 +42,6 @@ namespace ForumBuddy
             }
 
             var xmlConfig = XElement.Load(ConfigFileName);
-            var sourcesList = xmlConfig.Elements("Sources").FirstOrDefault();
-            var sourceConfigFragments = sourcesList.Elements("Source");
-
-            Console.WriteLine("Initializing Sources");
-            s_ThreadInfoSources = new List<IThreadInfoSource>();
-            var startupThreads = new List<ThreadInfo>();
-
-            foreach (var sourceConfigFragment in sourceConfigFragments)
-            {
-                var sourceTypeAttribute = sourceConfigFragment.Attributes().Where(a => a.Name == "type").FirstOrDefault();
-
-                if (null != sourceTypeAttribute)
-                {
-                    var type = Type.GetType(sourceTypeAttribute.Value);
-                    IThreadInfoSource source = Activator.CreateInstance(type) as IThreadInfoSource;
-                    if (null != source)
-                    {
-                        startupThreads.AddRange(source.Initialize(sourceConfigFragment.Element("SourceConfig")));
-                        source.OnNewThread += OnNewThread;
-                        source.StartThreadListener();
-                        s_ThreadInfoSources.Add(source);
-                    }
-                }
-            }
 
             Console.WriteLine("\nInitializing Sinks");
             s_ThreadInfoSinks = new List<IThreadInfoSink>();
@@ -88,6 +64,31 @@ namespace ForumBuddy
                 }
             }
 
+            Console.WriteLine("Initializing Sources");
+            s_ThreadInfoSources = new List<IThreadInfoSource>();
+            var startupThreads = new List<ThreadInfo>();
+            var sourcesList = xmlConfig.Elements("Sources").FirstOrDefault();
+            var sourceConfigFragments = sourcesList.Elements("Source");
+
+            foreach (var sourceConfigFragment in sourceConfigFragments)
+            {
+                var sourceTypeAttribute = sourceConfigFragment.Attributes().Where(a => a.Name == "type").FirstOrDefault();
+
+                if (null != sourceTypeAttribute)
+                {
+                    var type = Type.GetType(sourceTypeAttribute.Value);
+                    IThreadInfoSource source = Activator.CreateInstance(type) as IThreadInfoSource;
+                    if (null != source)
+                    {
+                        startupThreads.AddRange(source.Initialize(sourceConfigFragment.Element("SourceConfig")));
+                        source.OnNewThread += OnNewThread;
+                        source.StartThreadListener();
+                        s_ThreadInfoSources.Add(source);
+                    }
+                }
+            }
+
+
             foreach (var thread in startupThreads)
             {
                 OnNewThread(null, thread);
@@ -101,9 +102,6 @@ namespace ForumBuddy
         {
             foreach (var sink in s_ThreadInfoSinks)
             {
-                Console.WriteLine();
-                Console.WriteLine(String.Format("Thread Info\n\nID: {0}\nTitle: {1}\nSummary: {2}\nLink: {3}", thread.Id, thread.Title, thread.Summary, thread.Link));
-                Console.WriteLine();
                 sink.PostThreadInfo(thread);
             }
         }

@@ -8,7 +8,7 @@ namespace ForumBuddy
 {
     public class SlackThreadInfoSink : IThreadInfoSink
     {
-        private string sinkNmae;
+        private string sinkName;
         private Uri webhookUrl;
         private string channel;
         private string userName;
@@ -18,7 +18,7 @@ namespace ForumBuddy
 
         public void Initialize(XElement configFragment)
         {
-            this.sinkNmae = configFragment.Attribute("name").Value;
+            this.sinkName = configFragment.Attribute("name").Value;
             this.webhookUrl = new Uri(configFragment.Element("WebhookUrl").Value);
             this.channel = configFragment.Element("Channel").Value;
             this.userName = configFragment.Element("UserName").Value;
@@ -37,6 +37,16 @@ namespace ForumBuddy
             if (!this.priorities.Contains(threadInfo.Priority))
                 return;
 
+            Console.WriteLine();
+            Console.WriteLine("Posting thread to: " + this.sinkName);
+            Console.WriteLine(String.Format("ID: {0}\nTitle: {1}\nSummary: {2}\nLink: {3}", 
+                threadInfo.Id, 
+                threadInfo.Title, 
+                threadInfo.Summary, 
+                threadInfo.Link));
+
+            Console.WriteLine();
+
             var webRequest = (HttpWebRequest)WebRequest.Create(this.webhookUrl);
             webRequest.ContentType = "text/json";
             webRequest.Method = "POST";
@@ -44,7 +54,7 @@ namespace ForumBuddy
             using (var streamWriter = new StreamWriter(webRequest.GetRequestStream()))
             {
                 string botMessage = string.Format(this.messageBody, threadInfo.Title, threadInfo.Id, threadInfo.Summary, threadInfo.Link);
-                string json = "{\"text\":\""+ botMessage + "\"," +
+                string json = "{\"text\":\"" + botMessage + "\"," +
                               "\"username\":\"" + this.userName + "\"," +
                               "\"channel\":\"" + this.channel + "\"," +
                               "\"icon_url\":\"" + this.iconUri.ToString() + "\"}";
